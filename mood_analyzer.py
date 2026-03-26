@@ -33,6 +33,31 @@ class MoodAnalyzer:
         self.positive_words = set(w.lower() for w in positive_words)
         self.negative_words = set(w.lower() for w in negative_words)
 
+        self._emoji_scores = {
+            ":)": 1,
+            ":-)": 1,
+            "😂": 1,
+            "😍": 2,
+            "🤩": 2,
+            ":(": -1,
+            ":-(": -1,
+            "🥲": -1,
+            "💀": -1,
+            "😭": -2,
+            "😤": -1,
+            "🙄": -1,
+        }
+        self._slang_scores = {
+            "lowkey": 0,
+            "highkey": 0,
+            "lol": -1,
+            "ugh": -1,
+            "yay": 1,
+            "meh": 0,
+            "yikes": -1,
+            "oof": -1,
+        }
+
     # ---------------------------------------------------------------------
     # Preprocessing
     # ---------------------------------------------------------------------
@@ -59,7 +84,7 @@ class MoodAnalyzer:
         cleaned = re.sub(r"([a-z])\1{2,}", r"\1\1", cleaned)
 
         # Keep common emoticons and emojis as explicit tokens.
-        token_pattern = r":-\)|:\)|:-\(|:\(|🥲|😂|💀|[a-z0-9]+(?:'[a-z0-9]+)?"
+        token_pattern = r":-\)|:\)|:-\(|:\(|🥲|😂|💀|😍|🤩|😭|😤|🙄|[a-z0-9]+(?:'[a-z0-9]+)?"
         tokens = re.findall(token_pattern, cleaned)
 
         return tokens
@@ -85,23 +110,27 @@ class MoodAnalyzer:
         tokens = self.preprocess(text)
         score = 0
 
-        negation_words = {"not", "never", "no"}
+        negation_words = {"not", "never", "no", "dont", "don't",
+                          "won't", "wont", "isn't", "isnt", "didn't", "didnt",
+                          "doesn't", "doesnt", "without"}
+
+        # Words that carry stronger or weaker sentiment than the default ±1.
+        word_weights = {
+            # strong positives
+            "love": 2, "amazing": 2, "fantastic": 2, "wonderful": 2,
+            "thrilled": 2, "excellent": 2, "brilliant": 2, "perfect": 2,
+            # mild positives
+            "okay": 0.5, "fine": 0.5, "nice": 0.5, "cool": 0.5,
+            # strong negatives
+            "hate": -2, "terrible": -2, "awful": -2, "miserable": -2,
+            "hopeless": -2, "worthless": -2, "devastated": -2, "terrified": -2,
+            # mild negatives
+            "annoyed": -0.5, "tired": -0.5, "boring": -0.5,
+        }
 
         # Extra sentiment cues from emojis/emoticons and common slang.
-        emoji_scores = {
-          ":)": 1,
-          ":-)": 1,
-          "😂": 1,
-          ":(": -1,
-          ":-(": -1,
-          "🥲": -1,
-          "💀": -1,
-        }
-        slang_scores = {
-          "lowkey": 0,
-          "highkey": 0,
-          "lol": -1,
-        }
+        emoji_scores = self._emoji_scores
+        slang_scores = self._slang_scores
 
         i = 0
         while i < len(tokens):
@@ -116,16 +145,18 @@ class MoodAnalyzer:
           sentiment_value = 0
 
           if token in self.positive_words:
-            sentiment_value = 1
+            sentiment_value = word_weights.get(token, 1)
           elif token in self.negative_words:
-            sentiment_value = -1
+            sentiment_value = word_weights.get(token, -1)
           elif token in emoji_scores:
             sentiment_value = emoji_scores[token]
           elif token in slang_scores:
             sentiment_value = slang_scores[token]
 
           if sentiment_value != 0:
-            if i > 0 and tokens[i - 1] in negation_words:
+            # Look back up to 2 tokens for a negation word.
+            negation_window = tokens[max(0, i - 2):i]
+            if any(t in negation_words for t in negation_window):
               sentiment_value *= -1
             score += sentiment_value
 
@@ -140,7 +171,7 @@ class MoodAnalyzer:
 
           window_end = min(len(tokens), i + 6)
           if any(t in sarcasm_context for t in tokens[i + 1:window_end]):
-            score -= 2
+            score -= 4
             break
 
         return score
@@ -166,17 +197,30 @@ class MoodAnalyzer:
         you use in TRUE_LABELS in dataset.py if you care about accuracy.
         """
         score = self.score_text(text)
-        if score > 0:
-          return "positive"
-        if score < 0:
-          return "negative"
 
         tokens = self.preprocess(text)
-        has_positive = any(token in self.positive_words for token in tokens)
-        has_negative = any(token in self.negative_words for token in tokens)
+        has_positive = any(
+            token in self.positive_words or self._emoji_scores.get(token, 0) > 0
+            for token in tokens
+        )
+        has_negative = any(
+            token in self.negative_words or self._emoji_scores.get(token, 0) < 0
+            for token in tokens
+        )
 
+        # Use a threshold of ±1.5 so weak mixed signals don't force a label.
+        if score >= 1.5:
+            return "positive"
+        if score <= -1.5:
+            return "negative"
+
+        # Score is ambiguous — use word presence to distinguish mixed vs neutral.
         if has_positive and has_negative:
-          return "mixed"
+            return "mixed"
+        if score > 0 and has_positive:
+            return "positive"
+        if score < 0 and has_negative:
+            return "negative"
         return "neutral"
 
     # ---------------------------------------------------------------------

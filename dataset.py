@@ -23,6 +23,38 @@ POSITIVE_WORDS = [
     "chill",
     "relaxed",
     "amazing",
+    # expanded
+    "joy",
+    "joyful",
+    "fantastic",
+    "wonderful",
+    "thankful",
+    "grateful",
+    "blessed",
+    "thrilled",
+    "proud",
+    "peaceful",
+    "motivated",
+    "hopeful",
+    "cheerful",
+    "delighted",
+    "pleasant",
+    "enjoy",
+    "enjoyed",
+    "enjoying",
+    "glad",
+    "smile",
+    "laugh",
+    "laughing",
+    "win",
+    "winning",
+    "won",
+    "perfect",
+    "brilliant",
+    "excellent",
+    "nice",
+    "cool",
+    "sweet",
 ]
 
 NEGATIVE_WORDS = [
@@ -36,6 +68,37 @@ NEGATIVE_WORDS = [
     "stressed",
     "hate",
     "boring",
+    # expanded
+    "miserable",
+    "lonely",
+    "anxious",
+    "worried",
+    "frustrated",
+    "disappointed",
+    "exhausted",
+    "hopeless",
+    "terrified",
+    "scared",
+    "depressed",
+    "empty",
+    "lost",
+    "hurt",
+    "pain",
+    "cry",
+    "crying",
+    "cried",
+    "dread",
+    "dreading",
+    "failed",
+    "failure",
+    "useless",
+    "worthless",
+    "annoyed",
+    "irritated",
+    "overwhelmed",
+    "broken",
+    "drained",
+    "numb",
 ]
 
 # ---------------------------------------------------------------------
@@ -58,6 +121,17 @@ SAMPLE_POSTS = [
     "That movie was wild 💀 I can't tell if I loved it or hated it",
     "Not bad, not great, just existing :)",
     "Everyone forgot my birthday lol",
+    # added examples
+    "I can't believe how wonderful today turned out",
+    "Feeling hopeless and completely drained",
+    "Don't really know how I feel about this",
+    "Ugh, another Monday. I hate this.",
+    "So grateful for my friends, they really came through 😂",
+    "Passed the exam but I don't even care anymore",
+    "Everything is falling apart and I just feel numb",
+    "Honestly not bad today, kind of peaceful",
+    "I won but it doesn't feel worth it 🥲",
+    "Finally done with that project, feeling great!",
 ]
 
 # Human labels for each post above.
@@ -81,6 +155,16 @@ TRUE_LABELS = [
     "mixed",     # "That movie was wild 💀 I can't tell if I loved it or hated it"
     "neutral",   # "Not bad, not great, just existing :)"
     "negative",  # "Everyone forgot my birthday lol"
+    "positive",  # "I can't believe how wonderful today turned out"
+    "negative",  # "Feeling hopeless and completely drained"
+    "neutral",   # "Don't really know how I feel about this"
+    "negative",  # "Ugh, another Monday. I hate this."
+    "positive",  # "So grateful for my friends, they really came through 😂"
+    "mixed",     # "Passed the exam but I don't even care anymore"
+    "negative",  # "Everything is falling apart and I just feel numb"
+    "positive",  # "Honestly not bad today, kind of peaceful"
+    "mixed",     # "I won but it doesn't feel worth it 🥲"
+    "positive",  # "Finally done with that project, feeling great!"
 ]
 
 # TODO: Add 5-10 more posts and labels.
