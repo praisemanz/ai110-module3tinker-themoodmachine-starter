@@ -9,6 +9,7 @@ This class starts with very simple logic:
   - Convert that score into a mood label
 """
 
+import re
 from typing import List, Dict, Tuple, Optional
 
 from dataset import POSITIVE_WORDS, NEGATIVE_WORDS
@@ -53,7 +54,13 @@ class MoodAnalyzer:
           - Normalize repeated characters ("soooo" -> "soo")
         """
         cleaned = text.strip().lower()
-        tokens = cleaned.split()
+
+        # Collapse long repeated letters to keep expressive spelling consistent.
+        cleaned = re.sub(r"([a-z])\1{2,}", r"\1\1", cleaned)
+
+        # Keep common emoticons and emojis as explicit tokens.
+        token_pattern = r":-\)|:\)|:-\(|:\(|🥲|😂|💀|[a-z0-9]+(?:'[a-z0-9]+)?"
+        tokens = re.findall(token_pattern, cleaned)
 
         return tokens
 
@@ -75,15 +82,68 @@ class MoodAnalyzer:
           - Give some words higher weights than others (for example "hate" < "annoyed")
           - Treat emojis or slang (":)", "lol", "💀") as strong signals
         """
-        # TODO: Implement this method.
-        #   1. Call self.preprocess(text) to get tokens.
-        #   2. Loop over the tokens.
-        #   3. Increase the score for positive words, decrease for negative words.
-        #   4. Return the total score.
-        #
-        # Hint: if you implement negation, you may want to look at pairs of tokens,
-        # like ("not", "happy") or ("never", "fun").
-        pass
+        tokens = self.preprocess(text)
+        score = 0
+
+        negation_words = {"not", "never", "no"}
+
+        # Extra sentiment cues from emojis/emoticons and common slang.
+        emoji_scores = {
+          ":)": 1,
+          ":-)": 1,
+          "😂": 1,
+          ":(": -1,
+          ":-(": -1,
+          "🥲": -1,
+          "💀": -1,
+        }
+        slang_scores = {
+          "lowkey": 0,
+          "highkey": 0,
+          "lol": -1,
+        }
+
+        i = 0
+        while i < len(tokens):
+          token = tokens[i]
+
+          # Treat "no cap" as a phrase-level positive slang signal.
+          if i + 1 < len(tokens) and token == "no" and tokens[i + 1] == "cap":
+            score += 1
+            i += 2
+            continue
+
+          sentiment_value = 0
+
+          if token in self.positive_words:
+            sentiment_value = 1
+          elif token in self.negative_words:
+            sentiment_value = -1
+          elif token in emoji_scores:
+            sentiment_value = emoji_scores[token]
+          elif token in slang_scores:
+            sentiment_value = slang_scores[token]
+
+          if sentiment_value != 0:
+            if i > 0 and tokens[i - 1] in negation_words:
+              sentiment_value *= -1
+            score += sentiment_value
+
+          i += 1
+
+        # Heuristic sarcasm rule: phrases like "love ... traffic" are
+        # usually complaints, not positive sentiment.
+        sarcasm_context = {"traffic", "stuck", "jam", "commute", "delay", "line"}
+        for i, token in enumerate(tokens):
+          if token not in {"love", "loving", "loved"}:
+            continue
+
+          window_end = min(len(tokens), i + 6)
+          if any(t in sarcasm_context for t in tokens[i + 1:window_end]):
+            score -= 2
+            break
+
+        return score
 
     # ---------------------------------------------------------------------
     # Label prediction
@@ -105,12 +165,19 @@ class MoodAnalyzer:
         Just remember that whatever labels you return should match the labels
         you use in TRUE_LABELS in dataset.py if you care about accuracy.
         """
-        # TODO: Implement this method.
-        #   1. Call self.score_text(text) to get the numeric score.
-        #   2. Return "positive" if the score is above 0.
-        #   3. Return "negative" if the score is below 0.
-        #   4. Return "neutral" otherwise.
-        pass
+        score = self.score_text(text)
+        if score > 0:
+          return "positive"
+        if score < 0:
+          return "negative"
+
+        tokens = self.preprocess(text)
+        has_positive = any(token in self.positive_words for token in tokens)
+        has_negative = any(token in self.negative_words for token in tokens)
+
+        if has_positive and has_negative:
+          return "mixed"
+        return "neutral"
 
     # ---------------------------------------------------------------------
     # Explanations (optional but recommended)
